@@ -58,7 +58,7 @@
         }
     </style>
 
-    <script src="js/palette.v3.js"></script>
+    <script src="js/palette.v4.js"></script>
     <script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-3.4.1.min.js"></script>
     <script src="js/popper.min.js"></script>
     <script src='https://ajax.aspnetcdn.com/ajax/bootstrap/4.3.1/bootstrap.min.js'></script>
@@ -91,6 +91,13 @@
                         <label class="col-sm-2 col-form-label">拼豆品牌：</label>
                         <select id="paletteSelect" class="form-control col-sm-4">
                             <option value="mard" selected>Mard融合豆</option>
+                            <option value="mard22">Mard2.2</option>
+                            <option value="mixiaowo">咪小窝</option>
+                            <option value="coco">coco</option>
+                            <option value="huangdoudou">黄豆豆</option>
+                            <option value="manman">漫漫</option>
+                            <option value="xiaowu">小舞</option>
+                            <option value="panpan">盼盼</option>
                             <option value="hama">Hama</option>
                             <option value="perler">Perler 5mm</option>
                             <option value="perler-mini">Perler mini 2.6mm</option>
@@ -224,10 +231,16 @@
                 <button class="btn btn-outline-primary float-right mx-2" type="button" id="showColorSum">
                     颜色统计
                 </button>
+                <button class="btn btn-outline-primary float-right mx-2" type="button" id="toggleColorCode">
+                    隐藏色号
+                </button>
                 <div class="float-right mx-2" id="brushToolBar">
                     <label id='brushInfo'></label>
                     <button type="button" class="btn btn-danger" id="disableBrushMode">退出</button>
                 </div>
+                <button class="btn btn-outline-primary float-right mx-2" type="button" data-toggle="modal" data-target="#shortageColorsModal">
+                    缺货色号管理
+                </button>
             </div>
             <div class="card-body" style='padding: 0;'>
                 <canvas id="viewCanvas"></canvas>
@@ -320,12 +333,12 @@
                             <li>大图上方的"颜色替换"按钮可以查看并删除所有已替换的颜色，也可以导入/导出所有替换列表，方便制作大型拼豆项目。</li>
                         </ul>
                     </p>
-                    <p>当前的拼豆调色板默认为<b>Mard</b>品牌的融合豆，并增加了国外几个较主流品牌的颜色作为参考。（2024.12.26更新：加入了黄豆豆，漫漫，盼盼色号）</p>
+                    <p>当前的拼豆调色板默认为<b>Mard</b>品牌的融合豆，并增加了国外几个较主流品牌的颜色作为参考。（2024.12.28更新：加入了咪小窝，coco，黄豆豆，漫漫，盼盼色号）</p>
                     <p>调色板引用自：<a
                             href="https://www.reddit.com/r/beadsprites/comments/7ebgal/xml_files_of_all_the_colors_hama_perler_nabbi/"
                             target="_blank" class="text-secondary">Reddit原帖</a>, 以及:<a href="https://pixm.lat/color-search"
                             target="_blank" class="text-secondary">怪兽工作台</a></p>
-                    <p class="text-info">最后更新时间：2024.12.26</p class="text-info">
+                    <p class="text-info">最后更新时间：2024.12.28</p class="text-info">
                     <p class="text-right">
                         by <a href="https://www.zhihu.com/people/aton" target="_blank"> 苏莉安 </a> <a href="https://github.com/IceDragonFla" target="_blank"> CrystalYan </a>
                         <a href="https://github.com/atonasting/fuse-bead-tool" target="_blank">
@@ -339,7 +352,7 @@
     <div class="modal hide" id="loadingMask" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static"
         data-keyboard="false">
         <div class="modal-dialog" role="document">
-             <div class="modal-content">
+            <div class="modal-content">
                 <div class="modal-body">
                     <div class="mask">
                         <div class="spinner-border text-dark m-3" role="status">
@@ -376,6 +389,37 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-primary" id="copyColorSum">复制统计结果</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="shortageColorsModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">缺货色号管理</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>当前缺货色号列表：</label>
+                        <div id="shortageColorList" class="mb-3">
+                            <!-- 这里会动态填充缺货色号 -->
+                        </div>
+                        <div class="input-group">
+                            <select class="form-control" id="colorToAdd">
+                                <!-- 这里会动态填充可选色号 -->
+                            </select>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" id="addShortageColor">添加</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="saveShortageColors">保存</button>
                 </div>
             </div>
         </div>
@@ -435,7 +479,7 @@
             // 如果没有选择功能色，则过滤掉所有功能色
             return palette.filter(color => !['Y', 'R', 'P', 'Q'].some(prefix => color.name.startsWith(prefix)));
         } else {
-            // 如果选择了功能色，则只保留普��色和选中的功能色
+            // 如果选择了功能色，则只保留普通色和选中的功能色
             return palette.filter(color => {
                 const prefix = color.name.charAt(0);
                 return !['Y', 'R', 'P', 'Q'].includes(prefix) || selectedFunctionColors.has(prefix);
@@ -1058,7 +1102,7 @@
         }
         $('#' + sliceContainerName).html(tableHtml);
 
-        //生成临时Canvas用于转换分割小图
+        //生成临时Canvas用于转换���割小图
         let tempCanvas = document.createElement('canvas'),
             tempCtx = tempCanvas.getContext('2d');
         tempCanvas.width = pieceSize;
@@ -1164,18 +1208,18 @@
                 if (colorSum.has(hex)) colorSum.set(hex, colorSum.get(hex) + 1);
                 else colorSum.set(hex, 1);
                 
-                // 只在非调暗状态(没有筛选或者是被筛选的颜色)时绘制文字
-                if (!filterColors.size > 0 || filterColors.has(hex)) {
+                // 只在非调暗状态且启用色号显示时绘制文字
+                if ((!filterColors.size || filterColors.has(hex)) && showColorCode) {
                     largeCtx.fillText(color.name, x * (pixelSize + 1) + ~~(pixelSize * 0.5), y * (pixelSize + 1) + ~~(pixelSize * 0.5));
                 }
             }
             else {
-                console.log('Error color: ' + rgbToHex(r, g, b));
+                console.log('Error color: ' + hex);
                 if (colorSum.has('Err')) colorSum.set('Err', colorSum.get('Err') + 1);
                 else colorSum.set('Err', 1);
                 
-                // 错误颜色也只在非调暗状态显示
-                if (!filterColors.size > 0 || filterColors.has(hex)) {
+                // 只在没有筛选且启用色号显示时显示错误标记
+                if (!filterColors.size && showColorCode) {
                     largeCtx.fillText('Err', x * (pixelSize + 1) + ~~(pixelSize * 0.5), y * (pixelSize + 1) + ~~(pixelSize * 0.5));
                 }
             }
@@ -1339,7 +1383,7 @@
         let viewCtx = viewCanvas.getContext('2d'),
             rulerX1Ctx = rulerX1Canvas.getContext('2d'), rulerX2Ctx = rulerX2Canvas.getContext('2d'),
             rulerY1Ctx = rulerY1Canvas.getContext('2d'), rulerY2Ctx = rulerY2Canvas.getContext('2d');
-        //绘制上横标尺
+        //绘制上�����标尺
         viewCtx.putImageData(rulerX1Ctx.getImageData(largeCanvasOffsetX, 0, viewCanvas.width - 2 * (pixelSize + 1), pixelSize + 1), pixelSize + 1, 0);
         //绘制下横标尺
         viewCtx.putImageData(rulerX2Ctx.getImageData(largeCanvasOffsetX, 0, viewCanvas.width - 2 * (pixelSize + 1), pixelSize + 1), pixelSize + 1, viewCanvas.height - pixelSize - 1);
@@ -1490,7 +1534,7 @@
         for (let [oldColor, newColor] of colorReplaceList) {
             if (newColor == fromColor) colorReplaceList.set(oldColor, toColor);
         }
-        //遍历像素替换列表，将原先目标颜色为fromColor的也换成toColor
+        //遍��像素替换列表，将原先目标颜色为fromColor的也换成toColor
         for (let [position, colors] of pixelColorReplaceList) {
             if (colors.new == fromColor) pixelColorReplaceList.set(position, { old: colors.old, new: toColor });
         }
@@ -1568,8 +1612,14 @@
     function generatePaletteMap(palette) {
         let map = new Map();
         for (let i = 0; i < palette.length; i++) {
-            let rgb = hexToRgb(palette[i].color);
-            map.set(palette[i].color, {
+            // 将颜色代码转换为小写
+            let color = palette[i].color.toLowerCase();
+            let rgb = hexToRgb(color);
+            if (!rgb) {
+                console.error(`Invalid color code: ${palette[i].color} for ${palette[i].name}`);
+                continue;
+            }
+            map.set(color, {
                 name: palette[i].name,
                 r: rgb.r,
                 g: rgb.g,
@@ -1595,6 +1645,8 @@
 
     //十六进制颜色转rgb数值
     function hexToRgb(hex) {
+        // 将颜色代码转换为小写
+        hex = hex.toLowerCase();
         let result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
             r: parseInt(result[1], 16),
@@ -1629,12 +1681,43 @@
         let lab1 = rgbToLab(r1, g1, b1);
         let lab2 = rgbToLab(r2, g2, b2);
         
-        // 计算LAB空间中的欧氏距离
-        return Math.sqrt(
+        // 1. 计算LAB欧氏距离
+        const labDistance = Math.sqrt(
             Math.pow(lab2.l - lab1.l, 2) + 
             Math.pow(lab2.a - lab1.a, 2) + 
             Math.pow(lab2.b - lab1.b, 2)
         );
+        
+        // 2. 计算CIEDE2000距离
+        const ciede2000Distance = CIEDE2000(lab1, lab2);
+        
+        // 3. 计算LAB空间中的曼哈顿距离，加入亮度补偿
+        const manhattanDistance = (
+            Math.abs(lab2.l - lab1.l) * 1.5 + // 增加亮度分量的权重
+            Math.abs(lab2.a - lab1.a) + 
+            Math.abs(lab2.b - lab1.b)
+        );
+        
+        // 调整权重分配
+        const weights = {
+            ciede2000: 0.4,  // 增加CIEDE2000权重
+            lab: 0.4,        // 增加LAB欧氏距离权重
+            manhattan: 0.2   // 降低曼哈顿距离权重
+        };
+        
+        // 归一化处理
+        const normalizedManhattan = manhattanDistance / Math.sqrt(3);
+        
+        // 添加亮度偏好因子
+        const brightnessFactor = 1.0 + 
+            (lab1.l < 50 ? 0.2 : 0) +  // 当原始颜色较暗时
+            (lab2.l < 30 ? 0.3 : 0);   // 惩罚过暗的匹配结果
+        
+        return (
+            weights.ciede2000 * ciede2000Distance + 
+            weights.lab * labDistance + 
+            weights.manhattan * normalizedManhattan
+        ) * brightnessFactor;
     }
 
     // 在 colorDistance 函数之前添加 rgbToLab 函数
@@ -1842,25 +1925,48 @@
         return deltaE;
     }
 
-    // 修改颜色距离计算函数，结合LAB欧氏距离和CIEDE2000
+    // 修改颜色距离计算函数，结合LAB欧氏距离、CIEDE2000和曼哈顿距离
     function colorDistance(r1, g1, b1, r2, g2, b2) {
         let lab1 = rgbToLab(r1, g1, b1);
         let lab2 = rgbToLab(r2, g2, b2);
         
-        // 计算LAB欧氏距离
+        // 1. 计算LAB欧氏距离
         const labDistance = Math.sqrt(
             Math.pow(lab2.l - lab1.l, 2) + 
             Math.pow(lab2.a - lab1.a, 2) + 
             Math.pow(lab2.b - lab1.b, 2)
         );
         
-        // 计算CIEDE2000距离
+        // 2. 计算CIEDE2000距离
         const ciede2000Distance = CIEDE2000(lab1, lab2);
         
-        // 结合两种距离，使用加权平均
-        // CIEDE2000权重更高因为它更准确
-        const weight = 0.7; // CIEDE2000的权重
-        return (weight * ciede2000Distance + (1 - weight) * labDistance);
+        // 3. 计算LAB空间中的曼哈顿距离，加入亮度补偿
+        const manhattanDistance = (
+            Math.abs(lab2.l - lab1.l) * 1.5 + // 增加亮度分量的权重
+            Math.abs(lab2.a - lab1.a) + 
+            Math.abs(lab2.b - lab1.b)
+        );
+        
+        // 调整权重分配
+        const weights = {
+            ciede2000: 0.5,  // 增加CIEDE2000权重
+            lab: 0.4,        // 增加LAB欧氏距离权重
+            manhattan: 0.1   // 降低曼哈顿距离权重
+        };
+        
+        // 归一化处理
+        const normalizedManhattan = manhattanDistance / Math.sqrt(3);
+        
+        // 添加亮度偏好因子
+        const brightnessFactor = 0.7 + 
+            (lab1.l < 50 ? 0.2 : 0) +  // 当原始颜色较暗时
+            (lab2.l < 30 ? 0.3 : 0);   // 惩罚过暗的匹配结果
+        
+        return (
+            weights.ciede2000 * ciede2000Distance + 
+            weights.lab * labDistance + 
+            weights.manhattan * normalizedManhattan
+        ) * brightnessFactor;
     }
 
     // 修改颜色统计排序部分
@@ -1954,35 +2060,62 @@
     $('#sortBySimilar').on('click tap', () => sortColors('similar'));
     $('#sortByHue').on('click tap', () => sortColors('hue'));
 
-    // 添加镜像函数
+    // 添加一个全局变量来记录色号显示状态
+    var showColorCode = true; // 默认显示色号
+
+    // 添加按钮点击事件处理
+    $('#toggleColorCode').on('click tap', function() {
+        showColorCode = !showColorCode; // 切换状态
+        $(this).text(showColorCode ? '隐藏色号' : '显示色号');
+        
+        // 重新显示图像
+        if (!currentSliceImage) {
+            showFullImageView(true);
+        } else {
+            showImageView(sliceImages[currentSliceImage.y][currentSliceImage.x], pieceSize, pieceSize, true);
+        }
+    });
+
+    // 在其他函数定义后面添加flipImage函数
     function flipImage(direction) {
         showLoadingMask(() => {
             try {
                 // 1. 先对原始图片进行镜像处理
                 let ctx = originalCanvas.getContext('2d');
-                let imageData = ctx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
-                let flippedData = ctx.createImageData(originalCanvas.width, originalCanvas.height);
+                let width = originalCanvas.width;
+                let height = originalCanvas.height;
                 
-                for (let y = 0; y < originalCanvas.height; y++) {
-                    for (let x = 0; x < originalCanvas.width; x++) {
-                        let sourcePos = (y * originalCanvas.width + x) * 4;
-                        let targetX = direction === 'horizontal' ? originalCanvas.width - 1 - x : x;
-                        let targetY = direction === 'vertical' ? originalCanvas.height - 1 - y : y;
-                        let targetPos = (targetY * originalCanvas.width + targetX) * 4;
-                        
-                        flippedData.data[targetPos] = imageData.data[sourcePos];         // R
-                        flippedData.data[targetPos + 1] = imageData.data[sourcePos + 1]; // G
-                        flippedData.data[targetPos + 2] = imageData.data[sourcePos + 2]; // B
-                        flippedData.data[targetPos + 3] = imageData.data[sourcePos + 3]; // A
-                    }
+                // 创建临时canvas
+                let tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                let tempCtx = tempCanvas.getContext('2d');
+                
+                // 保存原始图像数据
+                tempCtx.drawImage(originalCanvas, 0, 0);
+                
+                // 清除原始canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // 根据方向进行镜像
+                if (direction === 'horizontal') {
+                    ctx.translate(width, 0);
+                    ctx.scale(-1, 1);
+                } else {
+                    ctx.translate(0, height);
+                    ctx.scale(1, -1);
                 }
                 
-                ctx.putImageData(flippedData, 0, 0);
+                // 绘制翻转后的图像
+                ctx.drawImage(tempCanvas, 0, 0);
+                
+                // 重置变换
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
                 
                 // 2. 清空所有缓存
                 similarColorCache = new Map();
-                paletteImageData = new Array();
-                sliceImages = new Array();
+                paletteImageData = null;
+                sliceImages = [];
                 currentSliceImage = null;
                 largeCanvasOffsetX = 0;
                 largeCanvasOffsetY = 0;
@@ -1994,7 +2127,7 @@
                 sliceCanvasToImage(fullCanvas, 'sliceImageContainer');
                 
                 // 5. 重新显示完整视图
-                showFullImageView();
+                showFullImageView(true);
                 
             } catch (err) {
                 console.error('Error in flip image:', err);
@@ -2003,13 +2136,131 @@
         });
     }
 
-    // 绑定按钮事件
+    // 在其他事件绑定代码后面添加（在script标签结束前）
+    // 绑定镜像按钮事件
     $('#flipHorizontal').on('click tap', function() {
         flipImage('horizontal');
     });
 
     $('#flipVertical').on('click tap', function() {
         flipImage('vertical');
+    });
+
+    // 3. 添加相关JavaScript代码
+    // 在全局变量声明部分添加
+    var shortageColors = new Set(); // 存储缺货色号
+
+    // 在其他函数定义后添加
+    // 更新缺货色号列表显示
+    function updateShortageColorList() {
+        let html = '';
+        for (let colorName of shortageColors) {
+            let color = Array.from(paletteMap.values()).find(c => c.name === colorName);
+            if (color) {
+                let hex = rgbToHex(color.r, color.g, color.b);
+                html += `
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="colorBlock" style="background:#${hex};color:${getFontColor(color.r, color.g, color.b)};">
+                            ${colorName}
+                        </div>
+                        <button class="btn btn-sm btn-danger ml-2" onclick="removeShortageColor('${colorName}')">删除</button>
+                    </div>
+                `;
+            }
+        }
+        $('#shortageColorList').html(html);
+    }
+
+    // 更新可选色号下拉列表
+    function updateColorSelector() {
+        let html = '<option value="">选择色号...</option>';
+        for (let color of paletteMap.values()) {
+            if (!shortageColors.has(color.name)) {
+                html += `<option value="${color.name}">${color.name}</option>`;
+            }
+        }
+        $('#colorToAdd').html(html);
+    }
+
+    // 删除缺货色号
+    function removeShortageColor(colorName) {
+        shortageColors.delete(colorName);
+        updateShortageColorList();
+        updateColorSelector();
+        // 保存到localStorage
+        localStorage.setItem('shortageColors', JSON.stringify(Array.from(shortageColors)));
+    }
+
+    // 修改findSimilarColor函数，跳过缺货色号
+    function findSimilarColor(r, g, b) {
+        let hex = rgbToHex(r, g, b);
+        // 首先查找缓存
+        if (similarColorCache.has(hex)) {
+            return similarColorCache.get(hex);
+        }
+
+        let minDistance = 584970;
+        let minColor = null;
+        for (let color of paletteMap.values()) {
+            // 跳过缺货色号
+            if (shortageColors.has(color.name)) {
+                continue;
+            }
+            let distance = colorDistance(color.r, color.g, color.b, r, g, b);
+            if (distance == 0) {
+                similarColorCache.set(hex, color);
+                return color;
+            }
+            if (distance < minDistance) {
+                minDistance = distance;
+                minColor = color;
+            }
+        }
+
+        similarColorCache.set(hex, minColor);
+        return minColor;
+    }
+
+    // 在页面加载完成后添加事件绑定
+    $(document).ready(function() {
+        // 从localStorage加载缺货色号
+        let savedShortageColors = localStorage.getItem('shortageColors');
+        if (savedShortageColors) {
+            shortageColors = new Set(JSON.parse(savedShortageColors));
+        }
+
+        // 显示模态窗口时更新列表
+        $('#shortageColorsModal').on('show.bs.modal', function() {
+            updateShortageColorList();
+            updateColorSelector();
+        });
+
+        // 添加缺货色号
+        $('#addShortageColor').on('click', function() {
+            let colorName = $('#colorToAdd').val();
+            if (colorName) {
+                shortageColors.add(colorName);
+                updateShortageColorList();
+                updateColorSelector();
+                $('#colorToAdd').val('');
+                // 保存到localStorage
+                localStorage.setItem('shortageColors', JSON.stringify(Array.from(shortageColors)));
+            }
+        });
+
+        // 保存按钮点击事件
+        $('#saveShortageColors').on('click', function() {
+            $('#shortageColorsModal').modal('hide');
+            // 清空颜色缓存并刷新图像
+            similarColorCache = new Map();
+            if (originalCanvas) {
+                showLoadingMask(() => {
+                    toPaletteColor(originalCanvas, fullCanvas);
+                    sliceCanvasToImage(fullCanvas, 'sliceImageContainer');
+                    showFullImageView();
+                });
+            }
+        });
     });
 </script>
 
